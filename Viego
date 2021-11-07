@@ -445,20 +445,20 @@ local function OnTick()
 				end
 			end
 		end
-		if Menu.Get("Harass.CastW") then
-			if spells.W:IsReady() then
-				local target = Orbwalker.GetTarget() or TS:GetTarget(spells.W.Range + Player.BoundingRadius, true)
-				if target and ValidTarget(target)
-						and target.Position:Distance(Player.Position) <= (Menu.Get("Harass.CastWMR") + Player.BoundingRadius)
-						and Player.Mana >= (Menu.Get("Harass.CastWMinMana") / 100) * Player.MaxMana then
-					CastW()
-				end
-			end
-		end
+		--if Menu.Get("Harass.CastW") then
+		--	if spells.W:IsReady() then
+			--	local target = Orbwalker.GetTarget() or TS:GetTarget(spells.W.Range + Player.BoundingRadius, true)
+			--	if target and ValidTarget(target)
+			--			and target.Position:Distance(Player.Position) <= (Menu.Get("Harass.CastWMR") + Player.BoundingRadius)
+			--			and Player.Mana >= (Menu.Get("Harass.CastWMinMana") / 100) * Player.MaxMana then
+			--		CastW()
+			--	end
+			--end
+		--end
 
-	end
+	--end
 
-end
+--end
         
 local function OnDraw()
     
