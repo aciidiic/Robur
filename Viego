@@ -401,17 +401,6 @@ local function OnTick()
              end
         end
         
-        -- if Menu.Get("Combo.CastE") then
-        --     if spells.E:IsReady() then
-        --         local target = Orbwalker.GetTarget or TS:GetTarget(spells.E.Range + Player.BoundingRadius, true)
-        --         if target and ValidTarget(target)
-        --              and target.Position:Distance(Player.Position) <= (Menu.Get("Combo.CastEHC") + Player.BoundingRadius) then
-        --                     CastE(target,Menu.Get("Combo.CastEHC"))
-        --                     return
-        --          end
-        --     end
-        --  end 
-
          if Menu.Get("Combo.CastR") then
             if spells.R:IsReady() then
                 
