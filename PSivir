@@ -92,7 +92,7 @@ local function IsTargetCC(target)
 end
 
 local function IsUltimateActive()
-	return Player:GetSpell(SpellSlots.R).Name == "ViegoR"
+	return Player:GetSpell(SpellSlots.R).Name == "Sivir"
 end
 
 local function HasPerkDarkHarvest()
