@@ -30,14 +30,14 @@ function PSivir()
     end)
     Menu.NewTree("PSivir Harass", "Harass", function()
     Menu.Checkbox("Harass.CastQ", "Cast Q", true)
-    Menu.Slider("Harass.CastQHC", "Q Hit Chance", 0.60, 0.05,1,0.05)
     end)
     Menu.NewTree("PSivirWave", "Waveclear", function()
     Menu.ColoredText("Wave", 0xFFD700FF, true)
     Menu.Checkbox("Waveclear.CastQJg", "Cast Q for killable CS", true)
-    Menu.Slider("Waveclear.CastQHCJg", "Q Hit Chance", 0.60,0.05,1,0.05)
-    Menu.Slider("Waveclear.CastQ", "Q Min. Killable", 1, 0, 10, 1)
-    Menu.Slider("Waveclear.CastQHC", "Q Hit Chance", 0.60, 0.05, 1, 0.05)
+    Menu.Slider("Waveclear.CastQHC", "Q Minion Hitchance", 0.60,0.05,1,0.05)
+    Menu.Checkbox("Waveclear.CastQ", "Cast Q on Jungle", true)
+    Menu.Slider("Waveclear.CastQHCJg", "Q Jungle Hit Chance", 0.60, 0.05,1,0.05)
+    Menu.Checkbox("Waveclear.CastW", "Cast W On Waveclear",true)
     end)
     Menu.NewTree("Psivir Misc", "Misc.", function()
     Menu.Checkbox("Misc.CastRGap", "Auto-Cast R on Gapclose", true)
@@ -92,7 +92,7 @@ local function IsTargetCC(target)
 end
 
 local function IsUltimateActive()
-	return Player:GetSpell(SpellSlots.R).Name == "Sivir"
+	return Player:GetSpell(SpellSlots.R).Name == "ViegoR"
 end
 
 local function HasPerkDarkHarvest()
@@ -114,7 +114,7 @@ end
 function GetQDmg(target)
     local playerAI = Player.AsAI
     local dmgQ = 15 + 35 * Player:GetSpell(SpellSlots.Q).Level
-    local bonusDmg = (((0.70 + 0.15) * Player:GetSpell(SpellSlots.Q).Level)*(playerAI.TotalAD) + (0.50 * playerAI.TotalAP))
+    local bonusDmg = ((0.70 + 0.15 * Player:GetSpell(SpellSlots.Q).Level)*(playerAI.TotalAD) + (0.50 * playerAI.TotalAP))
     local totalDmg = dmgQ + bonusDmg
 
 
@@ -125,13 +125,7 @@ function GetQDmg(target)
     return DamageLib.CalculatePhysicalDamage(Player, target, totalDmg)
 end
 
-function GetWDmg(target)
-    local playerAI = Player.AsAI
-    local dmgW = (0.30 + 0.15) * playerAI.TotalAD
-    local totalDmg = dmgW
-    
-    return DamageLib.CalculatePhysicalDamage(Player, target, totalDmg)
-end
+
 
 
 function GetDamage(target)
@@ -142,12 +136,6 @@ function GetDamage(target)
     then
         totalDmg = totalDmg + GetQDmg(target)
     end
-    
-    if spells.W:IsReady()
-    then
-        totalDmg = playerAI.TotalAD + GetWDmg(target)
-    end
-
 
     return totalDmg
 end
@@ -163,7 +151,7 @@ end
 
 function CastW(target)
     if spells.W:IsReady() then
-        if spells.W:Cast(target, hitchance) then 
+        if spells.W:Cast() then 
             return
         end
     end
@@ -172,7 +160,7 @@ end
 function CastE(target)
     if spells.E:IsReady() 
     then
-        if spells.E:Cast(target) then
+        if spells.E:Cast(target, hitchance) then
             return
         end
     end
@@ -188,61 +176,86 @@ function CastR(target)
     end
 end
 
+function IsInAARange(Target)
+    return Player:Distance(Target) <= Orbwalker.GetTrueAutoAttackRange(Player, Target)
+end
+
+
+
+
 local function Waveclear()
 
-	if spells.Q:IsReady() then
+                if spells.Q:IsReady() then
 
-		local pPos, pointsQ = Player.Position, {}
-		local isJgCS = false
+                    local pPos, pointsQ = Player.Position, {}
+                    local isJgCS = false
 
-		-- Enemy Minions
-		for k, v in pairs(ObjManager.GetNearby("enemy", "minions")) do
-			local minion = v.AsAI
-			local minionDmgQ = GetQDmg(minion)
-			local healthPred = HealthPred.GetHealthPrediction(minion, spells.Q.Delay)
-			if ValidMinion(minion) and minionDmgQ >= healthPred then
-				local posQ = minion:FastPrediction(spells.Q.Delay)
-				if posQ:Distance(pPos) < spells.Q.Range and minion.IsTargetable then
-					table.insert(pointsQ, posQ)
-				end
-			end
-		end
+                    -- Enemy Minions
+                    for k, v in pairs(ObjManager.GetNearby("enemy", "minions")) do
+                        local minion = v.AsAI
+                        local minionDmgQ = GetQDmg(minion)
+                        local healthPred = HealthPred.GetHealthPrediction(minion, spells.Q.Delay)
+                        if ValidMinion(minion) and minionDmgQ >= healthPred then
+                            local posQ = minion:FastPrediction(spells.Q.Delay)
+                            if posQ:Distance(pPos) < spells.Q.Range and minion.IsTargetable then
+                                table.insert(pointsQ, posQ)
+                            end
+                        end
+                    end
 
-		-- Jungle Minions
-		if #pointsQ == 0 then
-			for k, v in pairs(ObjManager.GetNearby("neutral", "minions")) do
-				local minion = v.AsAI
-				if ValidMinion(minion) then
-					local posQ = minion:FastPrediction(spells.Q.Delay)
-					if posQ:Distance(pPos) < spells.Q.Range and minion.IsTargetable then
-						isJgCS = true
-						table.insert(pointsQ, posQ)
-					end
-				end
-			end
-		end
+                    -- Jungle Minions
+                    if #pointsQ == 0 then
+                        for k, v in pairs(ObjManager.GetNearby("neutral", "minions")) do
+                            local minion = v.AsAI
+                            if ValidMinion(minion) then
+                                local posQ = minion:FastPrediction(spells.Q.Delay)
+                                if posQ:Distance(pPos) < spells.Q.Range and minion.IsTargetable then
+                                    isJgCS = true
+                                    table.insert(pointsQ, posQ)
+                                end
+                            end
+                        end
+                    end
 
-		local castQMenu = nil
-		local castQHCMenu = nil
+                    local castQMenu = nil
+                    local castQHCMenu = nil
+                    
 
-		if not isJgCS then
-			castQMenu = Menu.Get("Waveclear.CastQ")
-			castQHCMenu = Menu.Get("Waveclear.CastQHC")
-		else
-			castQMenu = Menu.Get("Waveclear.CastQJg")
-			castQHCMenu = Menu.Get("Waveclear.CastQHCJg")
-		end
+                    if not isJgCS then
+                        castQMenu = Menu.Get("Waveclear.CastQ")
+                        castQHCMenu = Menu.Get("Waveclear.CastQHC")
+                        castWMenu = Menu.Get("Waveclear.CastQ")
+                    else
+                        castQMenu = Menu.Get("Waveclear.CastQJg")
+                        castQHCMenu = Menu.Get("Waveclear.CastQHCJg")
+                    end
 
-		local bestPosQ, hitCountQ = spells.Q:GetBestCircularCastPos(pointsQ)
+                    local bestPosQ, hitCountQ = spells.Q:GetBestCircularCastPos(pointsQ)
 
-		if bestPosQ and hitCountQ >= castQHCMenu
-				and spells.Q:IsReady() and castQMenu then
-			spells.Q:Cast(bestPosQ)
-			return
-		end
+                    if bestPosQ and hitCountQ >= castQHCMenu
+                            and spells.Q:IsReady() and castQMenu then
+                        spells.Q:Cast(bestPosQ)
+                        return
+                    end
 
-	end
-end
+                end
+
+                if Menu.Get("Waveclear.CastW") then
+
+             
+                    local minions = ObjManager.Get("enemy", "minions")
+                    if spells.W:IsReady() and (spells.Q:IsReady() == false)
+                    then
+                        spells.W:Cast()
+                    end
+                end
+            end
+        
+    
+
+
+
+
 
 function OnHighPriority()
     if not GameIsAvailable() then return end
@@ -266,34 +279,22 @@ function OnTick()
         
             if Menu.Get("Combo.CastW") 
             then
-                if spells.W:IsReady() 
+                if spells.W:IsReady() and (spells.Q:IsReady() == false)
                 then
                     local target = spells.W:GetTarget()
-                    if target and ValidTarget(target) and target.Position:Distance(Player.Position) == (Player.position)
+                    if target and ValidTarget(target) and IsInAARange(target)
                     then
                         CastW(target)
                     end
                 end
             end
         
-            if Menu.Get("Combo.CastE")
-            then
-                if spells.E:IsReady()
-                then
-                    local playerAI = Player.AsAI
-                    local target = playerAI.self
-                    if target and ValidTarget(target) == target
-                    then
-                        CastE(target)
-                    end
-                end
-            end
             
             if Menu.Get("Combo.CastR")
             then
-                if spells.R:IsReady()
+                if spells.R:IsReady() and (spells.Q:IsReady() == false)
                 then
-                    local target = spells.Q:GetTarget()
+                    local target = spells.R:GetTarget()
                     if target and ValidTarget(target) and target.Position:Distance(Player.Position) <= (900)
                     then
                         CastR(target)
@@ -343,7 +344,7 @@ function OnGapclose(source, dash)
 	local pDist = pPos:Distance(endPos)
 	if pDist > 700 or pDist > pPos:Distance(dash.StartPos) or not source:IsFacing(pPos) then return end
 
-	if Menu.Get("Misc.CastWGap") and spells.R:IsReady() then
+	if Menu.Get("Misc.CastRGap") and spells.R:IsReady() then
 		Input.Cast(SpellSlots.R)
 	end
 end
